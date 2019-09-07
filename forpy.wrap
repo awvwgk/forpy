@@ -1,0 +1,5 @@
+[wrap-git]
+directory = forpy
+
+url = https://github.com/awvwgk/forpy.git
+revision = head
