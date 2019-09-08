@@ -1,1 +1,2 @@
 option('PY_VERSION', type: 'integer', min: 2, max: 3, value:3)
+option('PY_DEBUG', type: 'boolean', value: false)
