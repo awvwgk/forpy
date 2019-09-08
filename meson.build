@@ -1,6 +1,13 @@
-project('forpy', 'fortran', version: '0.0')
+project('forpy', 'fortran')
 
-# there is a bug in fypp that prevents using it with python3
+# gfortran is cutting of free format source code, we should disable this here
+fc = meson.get_compiler('fortran')
+if fc.get_id() == 'gcc'
+  add_project_arguments('-ffree-line-length-none', language: 'fortran')
+endif
+
+# forpy needs fypp as preprocessor for its code to allow template-like programming
+# note that the generated source is preprocessed again
 fypp = find_program('fypp', 'fypp.py', required: true)
 fypp_gen = generator(fypp, arguments: '@INPUT@', capture: true,
                      output: '@BASENAME@.F90')
@@ -17,11 +24,11 @@ endif
 forpy_source = fypp_gen.process('forpy_mod.fypp')
 
 forpy = library(meson.project_name(), forpy_source,
-                version: meson.project_version(),
                 dependencies: python_dep, pic: true)
 
 forpy_dep = declare_dependency(link_with: forpy)
 
+# testsuite for forpy
 incdir = include_directories('tests')
 
 testmod = ['tests/unittest_mod.F90', 'tests/forpy_tests_common_mod.F90']
@@ -46,11 +53,16 @@ test('datastructures test',
                 dependencies: python_dep, include_directories: incdir,
                 link_with: [testlib, forpy]))
 
+# meson cannot find dependencies correctly from generated sources
+# we add the dependency manually by creating an archive and link it in as dependency
 ndarray_source = fypp_gen.process('tests/test_ndarray.fypp')
 ndarray_mod_source = fypp_gen.process('tests/test_ndarray_mod.fypp')
+ndarray_mod_lib = static_library('ndarray_mod', ndarray_mod_source,
+                                 include_directories: incdir,
+                                 link_with: [testlib, forpy])
 
 test('ndarray test',
      executable('test_ndarray',
-                sources: [ndarray_mod_source, ndarray_source],
+                sources: [ndarray_source],
                 dependencies: python_dep, include_directories: incdir,
-                link_with: [testlib, forpy]))
+                link_with: [ndarray_mod_lib, testlib, forpy]))
